@@ -4,11 +4,12 @@ import fs from 'fs/promises';
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { filename: string } }
-) {
+  { params }: { params: Promise<{ filename: string }> }
+): Promise<NextResponse> {
   try {
+    const { filename } = await params;
     const testFilesDir = join(process.cwd(), 'test-files');
-    const filePath = join(testFilesDir, params.filename);
+    const filePath = join(testFilesDir, filename);
 
     try {
       await fs.access(filePath);
