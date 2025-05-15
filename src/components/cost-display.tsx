@@ -22,6 +22,7 @@ interface CostEntry {
 
 const OPERATION_ICONS: Record<OperationType, React.ReactNode> = {
   chat: <MessageSquare className="h-3 w-3" />,
+  // eslint-disable-next-line jsx-a11y/alt-text
   image: <Image className="h-3 w-3" />,
   pdf: <FileText className="h-3 w-3" />,
   'supplier-risk': <Building2 className="h-3 w-3" />,

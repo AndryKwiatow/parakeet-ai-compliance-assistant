@@ -1,4 +1,4 @@
-import { OpenAIStream, StreamingTextResponse } from 'ai';
+import { NextRequest, NextResponse } from 'next/server';
 import OpenAI from 'openai';
 import { costTracker } from '@/lib/cost-tracker';
 import { ChatMessage } from '@/types/chat';
@@ -8,7 +8,7 @@ const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
 });
 
-export async function POST(req: Request) {
+export async function POST(req: NextRequest) {
   try {
     const { messages } = await req.json() as { messages: ChatMessage[] };
     const model = 'gpt-4-turbo-preview';
@@ -35,66 +35,47 @@ export async function POST(req: Request) {
       stream: true,
     });
 
-    let finalCompletion = '';
+    const encoder = new TextEncoder();
+    const customReadable = new ReadableStream({
+      async start(controller) {
+        let inputTokens = 0;
+        let outputTokens = 0;
 
-    const stream = OpenAIStream(response as any, {
-      onToken: (token) => {
-        finalCompletion += token;
-      },
-      onCompletion: async (completion: string) => {
-        console.log('Supplier Risk API: Completion received:', completion);
         try {
-          const inputTokens = messages.reduce((acc: number, msg: ChatMessage) => {
-            const content = msg.content || '';
-            return acc + Math.ceil(content.length / 4);
-          }, 0);
+          for await (const chunk of response) {
+            const content = chunk.choices[0]?.delta?.content || '';
+            if (content) {
+              controller.enqueue(encoder.encode(content));
+              outputTokens += Math.ceil(content.length / 4);
+            }
+            if (chunk.usage?.prompt_tokens) {
+              inputTokens = chunk.usage.prompt_tokens;
+            }
+          }
 
-          const outputTokens = Math.ceil(completion.length / 4);
-          
-          console.log('Supplier Risk API: Tracking costs:', {
-            model,
-            inputTokens,
-            outputTokens,
-            operation: 'supplier-risk'
-          });
-          
-          const cost = costTracker.trackCost(model, inputTokens, outputTokens, 'supplier-risk');
+          try {
+            costTracker.trackCost(model, inputTokens, outputTokens, 'supplier-risk');
+            window.dispatchEvent(new Event('costUpdate'));
+          } catch (error: unknown) {
+            const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
+            console.error('Error tracking costs:', errorMessage);
+          }
 
-          const costInfo = {
-            timestamp: Date.now(),
-            cost,
-            model,
-            inputTokens,
-            outputTokens,
-            operation: 'supplier-risk'
-          };
-
-          finalCompletion = `${completion}\n\n<cost-info>${JSON.stringify(costInfo)}</cost-info>`;
-          console.log('Supplier Risk API: Final message with cost info:', finalCompletion);
-        } catch (error) {
-          console.error('Error tracking costs:', error);
-          finalCompletion = completion;
+          controller.close();
+        } catch (error: unknown) {
+          const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
+          console.error('Error in stream processing:', errorMessage);
+          controller.error(errorMessage);
         }
       },
     });
 
-    const customStream = new TransformStream({
-      transform(chunk, controller) {
-        controller.enqueue(chunk);
-      },
-      flush(controller) {
-        if (finalCompletion) {
-          const encoder = new TextEncoder();
-          controller.enqueue(encoder.encode(`data: ${JSON.stringify({ type: 'text', data: finalCompletion })}\n\n`));
-        }
-      }
-    });
-
-    return new StreamingTextResponse(stream.pipeThrough(customStream));
-  } catch (error) {
-    console.error('Error in supplier risk chat route:', error);
-    return new Response(
-      JSON.stringify({ error: 'Internal server error' }),
+    return new NextResponse(customReadable);
+  } catch (error: unknown) {
+    const errorMessage = error instanceof Error ? error.message : 'Internal server error';
+    console.error('Error in supplier risk chat route:', errorMessage);
+    return NextResponse.json(
+      { error: errorMessage },
       { status: 500 }
     );
   }

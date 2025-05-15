@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useRef, useCallback } from 'react';
+import { useState, useCallback } from 'react';
 import { useChat } from 'ai/react';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
@@ -115,6 +115,7 @@ function WelcomeMessage() {
           <span className="text-sm">PDF Documents</span>
         </div>
         <div className="flex items-center gap-2 p-4 bg-muted/50 rounded-lg">
+          {/* eslint-disable-next-line jsx-a11y/alt-text */}
           <Image className="h-5 w-5 text-primary" />
           <span className="text-sm">Images (PNG, JPG, GIF)</span>
         </div>
@@ -145,7 +146,6 @@ export function ChatInterface() {
   const [uploadProgress, setUploadProgress] = useState(0);
   const [showError, setShowError] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
-  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const { messages, input, handleInputChange, handleSubmit, isLoading, append } = useChat({
     api: '/api/chat',
@@ -155,10 +155,8 @@ export function ChatInterface() {
       setShowError(true);
     },
     onResponse: (response) => {
-
       const reader = response.body?.getReader();
       if (!reader) return;
-
 
       const processStream = async () => {
         try {
@@ -166,24 +164,21 @@ export function ChatInterface() {
             const { done, value } = await reader.read();
             if (done) break;
 
-
             const chunk = new TextDecoder().decode(value);
             const lines = chunk.split('\n');
-
 
             for (const line of lines) {
               if (line.startsWith('data: ')) {
                 try {
                   const data = JSON.parse(line.slice(6));
                   if (data.type === 'cost') {
-
                     const event = new CustomEvent('costUpdate', {
                       detail: data.data
                     });
                     window.dispatchEvent(event);
                   }
-                } catch (e) {
-
+                } catch {
+                  // Silently handle JSON parse errors
                 }
               }
             }
@@ -198,10 +193,8 @@ export function ChatInterface() {
   });
 
   const onDrop = useCallback(async (acceptedFiles: File[]) => {
-
     if (!acceptedFiles[0]) return;
 
-2
     const file = acceptedFiles[0];
 
     if (file.size > Number(process.env.NEXT_PUBLIC_MAX_FILE_SIZE)) {
@@ -209,7 +202,6 @@ export function ChatInterface() {
       setShowError(true);
       return;
     }
-
 
     const allowedTypes = process.env.NEXT_PUBLIC_ALLOWED_FILE_TYPES?.split(',') || [];
     if (!allowedTypes.includes(file.type)) {
@@ -225,7 +217,6 @@ export function ChatInterface() {
     formData.append('file', file);
 
     try {
-
       const xhr = new XMLHttpRequest();
       
       const uploadPromise = new Promise<UploadResponse>((resolve, reject) => {
@@ -254,12 +245,10 @@ export function ChatInterface() {
       const data = await uploadPromise;
       toast.success('File uploaded successfully');
       
-
       await append({
         role: 'user',
         content: `I've uploaded a file named "${file.name}" for PII analysis.`,
       });
-
 
       await append({
         role: 'assistant',

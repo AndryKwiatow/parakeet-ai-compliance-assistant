@@ -93,11 +93,6 @@ export type ModelType = 'gpt-4-turbo-preview' | 'gpt-4-vision-preview';
 
 export type OperationType = 'chat' | 'supplier-risk' | 'upload';
 
-interface ModelCosts {
-  input: number;
-  output: number;
-}
-
 interface CostEntry {
   model: ModelType;
   operation: OperationType;

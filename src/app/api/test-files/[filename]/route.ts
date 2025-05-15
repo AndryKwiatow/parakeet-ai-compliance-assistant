@@ -1,45 +1,35 @@
-import { NextResponse } from 'next/server';
-import { promises as fs } from 'fs';
-import path from 'path';
-
-const TEST_FILES_DIR = path.join(process.cwd(), 'public', 'test-files');
+import { NextRequest, NextResponse } from 'next/server';
+import { join } from 'path';
+import fs from 'fs/promises';
 
 export async function GET(
-  request: Request,
+  request: NextRequest,
   { params }: { params: { filename: string } }
 ) {
   try {
-    const filename = params.filename;
-    const allowedFiles = ['health_report.png', 'bank_form.pdf', 'passport.jpg'];
-    
-    if (!allowedFiles.includes(filename)) {
-      return new NextResponse('File not found', { status: 404 });
-    }
+    const testFilesDir = join(process.cwd(), 'test-files');
+    const filePath = join(testFilesDir, params.filename);
 
-    const filePath = path.join(TEST_FILES_DIR, filename);
-    
     try {
       await fs.access(filePath);
     } catch {
-      return new NextResponse('File not found', { status: 404 });
+      return NextResponse.json(
+        { error: 'File not found' },
+        { status: 404 }
+      );
     }
 
-    const fileBuffer = await fs.readFile(filePath);
-    
-    const contentType = {
-      'png': 'image/png',
-      'pdf': 'application/pdf',
-      'jpg': 'image/jpeg',
-    }[filename.split('.').pop() || ''] || 'application/octet-stream';
-
-    return new NextResponse(fileBuffer, {
+    const fileContent = await fs.readFile(filePath, 'utf-8');
+    return new NextResponse(fileContent, {
       headers: {
-        'Content-Type': contentType,
-        'Content-Disposition': `attachment; filename="${filename}"`,
+        'Content-Type': 'text/plain',
       },
     });
   } catch (error) {
-    console.error('Error serving test file:', error);
-    return new NextResponse('Internal Server Error', { status: 500 });
+    console.error('Error reading test file:', error);
+    return NextResponse.json(
+      { error: 'Internal server error' },
+      { status: 500 }
+    );
   }
 } 

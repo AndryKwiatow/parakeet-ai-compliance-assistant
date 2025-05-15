@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { writeFile, mkdir } from 'fs/promises';
 import { join } from 'path';
-import { detectPII } from '@/lib/pii-detector';
 import OpenAI from 'openai';
 import fs from 'fs';
 import { costTracker } from '@/lib/cost-tracker';

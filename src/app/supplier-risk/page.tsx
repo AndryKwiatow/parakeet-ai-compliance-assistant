@@ -1,15 +1,14 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useEffect } from 'react';
 import { Card } from '@/components/ui/card';
-import { Search, Sparkles, Shield, Building2, AlertTriangle } from 'lucide-react';
-import { useChat } from 'ai/react';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { MessageSquare, Send, Building2 } from 'lucide-react';
+import { useChat } from 'ai/react';
+import { Input } from '@/components/ui/input';
 import { Avatar } from '@/components/ui/avatar';
-import { Bot, User, Send } from 'lucide-react';
-import { suppliers } from '@/data/suppliers';
+import { Bot, User, Sparkles, Shield, AlertTriangle } from 'lucide-react';
 
 const suggestedQuestions = [
   "What are the top 3 suppliers with the highest risk scores?",
@@ -128,7 +127,7 @@ export default function SupplierRiskPage() {
       <Card className="flex-1 flex flex-col">
         <div className="p-4 border-b">
           <div className="flex items-center gap-2">
-            <Search className="h-5 w-5 text-primary" />
+            <MessageSquare className="h-5 w-5 text-primary" />
             <h1 className="text-lg font-semibold">Supplier Risk Search</h1>
           </div>
         </div>
